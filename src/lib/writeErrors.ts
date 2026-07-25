@@ -128,7 +128,7 @@ export function classifyWriteError(error: unknown): Failure {
         kind: "rpc",
         title: "Wallet request already pending",
         detail:
-          "Your wallet is already waiting on a request — usually a popup hidden behind this window, or one dismissed without approving or rejecting. Open MetaMask, clear the pending request, then try again.",
+          "Your wallet thinks a request is still open. If you cannot see one, its queue is stuck — a known MetaMask behaviour after a popup is closed without approving or rejecting. In order: close every other tab of this site, then lock and unlock MetaMask from its account menu. If it persists, use MetaMask → Settings → Advanced → Clear activity tab data, or disable and re-enable the extension.",
       };
     case 4100:
       return {
