@@ -101,5 +101,33 @@ export function classifyWriteError(error: unknown): Failure {
     };
   }
 
-  return { kind: "rpc", title: "Network error", detail: error.shortMessage };
+  if (/rate limit|requests limited to|-32011|\b429\b/i.test(error.message)) {
+    return {
+      kind: "rpc",
+      title: "RPC rate limit",
+      detail:
+        "The public Monad endpoint is rate-limiting this browser. Wait a few seconds and try again, or point NEXT_PUBLIC_MONAD_RPC_URL at your own endpoint.",
+    };
+  }
+
+  /*
+    A gas-estimation failure usually means the call would revert, but the
+    wallet has stripped the revert data so nothing more specific can be
+    decoded. Say what it probably is rather than blaming the network.
+  */
+  if (/gas|estimat/i.test(error.message)) {
+    return {
+      kind: "rpc",
+      title: "Transaction would fail",
+      detail: `The wallet could not estimate gas, which usually means the call would revert. ${error.shortMessage}`,
+    };
+  }
+
+  // Keep the raw text: a confidently wrong explanation costs more than an
+  // unfamiliar one, and this is what gets pasted into a bug report.
+  return {
+    kind: "rpc",
+    title: error.name === "BaseError" ? "Request failed" : error.name,
+    detail: error.shortMessage || error.message,
+  };
 }

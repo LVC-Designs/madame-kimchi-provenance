@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { Hex } from "viem";
 import {
   useReadContract,
+  useSimulateContract,
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
@@ -67,6 +68,44 @@ export function RegisterBatchForm() {
     },
   });
 
+  // --- Dry run against our own RPC ---------------------------------------
+  /*
+    `writeContract` sends straight to the wallet, which does its own gas
+    estimation. When a call would revert, the wallet reports a generic
+    estimation failure carrying no revert data, so the real reason —
+    BatchAlreadyRegistered, EnforcedPause, a missing role — is unrecoverable
+    and surfaces as "Network error".
+
+    Simulating here first calls `eth_call` on our own transport, which returns
+    proper revert data that viem decodes into a named custom error. The reason
+    is then shown before the wallet is ever opened.
+  */
+  const callArgs = useMemo(
+    () =>
+      metadata === null || recordHash === null
+        ? undefined
+        : ([
+            recordHash,
+            batchIdHash(metadata.batchId),
+            (metadata.supersedesRecordHash ?? ZERO_HASH) as Hex,
+            batchStatusIndex(metadata.status),
+            metadataUri.trim(),
+          ] as const),
+    [metadata, recordHash, metadataUri],
+  );
+
+  const { data: simulation, error: simulationError } = useSimulateContract({
+    address: PROVENANCE_ADDRESS ?? undefined,
+    abi: kimchiProvenanceAbi,
+    functionName: "registerBatch",
+    args: callArgs,
+    account: gate.address,
+    query: {
+      enabled: gate.ready && callArgs !== undefined,
+      retry: false,
+    },
+  });
+
   // --- Write -------------------------------------------------------------
   const {
     writeContract,
@@ -85,10 +124,12 @@ export function RegisterBatchForm() {
 
   const failure = useMemo(() => {
     if (writeError !== null) return classifyWriteError(writeError);
+    if (simulationError !== null && simulationError !== undefined)
+      return classifyWriteError(simulationError);
     if (receiptError !== null && receiptError !== undefined)
       return classifyWriteError(receiptError);
     return null;
-  }, [writeError, receiptError]);
+  }, [writeError, receiptError, simulationError]);
 
   const busy = awaitingSignature || mining;
 
@@ -97,6 +138,8 @@ export function RegisterBatchForm() {
     metadata !== null &&
     recordHash !== null &&
     alreadyRegistered !== true &&
+    // Only offer to sign something that has already been shown to succeed.
+    simulation !== undefined &&
     !busy;
 
   function submit() {
@@ -109,18 +152,9 @@ export function RegisterBatchForm() {
       return;
     }
 
-    writeContract({
-      address: PROVENANCE_ADDRESS,
-      abi: kimchiProvenanceAbi,
-      functionName: "registerBatch",
-      args: [
-        recordHash,
-        batchIdHash(metadata.batchId),
-        (metadata.supersedesRecordHash ?? ZERO_HASH) as Hex,
-        batchStatusIndex(metadata.status),
-        metadataUri.trim(),
-      ],
-    });
+    // Send exactly the request the simulation validated.
+    if (simulation === undefined) return;
+    writeContract(simulation.request);
   }
 
   // -----------------------------------------------------------------------
