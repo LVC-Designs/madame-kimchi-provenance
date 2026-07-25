@@ -30,9 +30,13 @@ export function SiteFooter() {
   return (
     <footer className="border-ink-800 bg-ink-900 mt-20 border-t">
       <div className="mx-auto max-w-6xl px-5 py-12">
-        <h2 className="text-ink-400 font-mono text-[11px] font-semibold uppercase tracking-[0.2em]">
-          What a Batch Passport does and does not establish
-        </h2>
+        <div className="flex items-center gap-3">
+          {/* Identity rule, not a status indicator. */}
+          <span className="bg-brand-green h-px w-8 shrink-0" aria-hidden />
+          <h2 className="text-ink-400 font-mono text-[11px] font-semibold uppercase tracking-[0.2em]">
+            What a Batch Passport does and does not establish
+          </h2>
+        </div>
 
         <dl className="mt-6 grid gap-6 md:grid-cols-3">
           {CLAIMS.map((claim) => (

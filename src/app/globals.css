@@ -22,16 +22,17 @@
 */
 
 @theme {
-  /* Warm paper — product and batch narrative surfaces */
-  --color-paper-50: #fcf9f3;
-  --color-paper-100: #f7f1e6;
-  --color-paper-200: #efe5d3;
-  --color-paper-300: #e2d4bb;
-  --color-paper-400: #cbb794;
-  --color-paper-500: #ad9670;
-  --color-paper-700: #6d5c45;
-  --color-paper-800: #4d4130;
-  --color-paper-900: #3a3125;
+  /* Warm paper — product and batch narrative surfaces.
+     paper-100 is the brand Background Cream; the rest is a scale built from it. */
+  --color-paper-50: #fbf9f5;
+  --color-paper-100: #f5f2e9;
+  --color-paper-200: #e7e4da;
+  --color-paper-300: #d5d1c8;
+  --color-paper-400: #b0aca2;
+  --color-paper-500: #908b81;
+  --color-paper-700: #635e53;
+  --color-paper-800: #484337;
+  --color-paper-900: #363025;
 
   /* Deep ink — application chrome */
   --color-ink-950: #0a0b0e;
@@ -59,25 +60,51 @@
   --color-monad-900: #2e1a72;
   --color-monad-950: #200052;
 
-  /* Alert red — quarantine, recall, tamper failure ONLY */
-  --color-alert-200: #f7cbc7;
-  --color-alert-300: #f0a49d;
-  --color-alert-400: #e26a60;
-  --color-alert-500: #d6392f;
-  --color-alert-600: #b62a22;
-  --color-alert-800: #6d1712;
-  --color-alert-950: #330a07;
+  /* Alert red — quarantine, recall, tamper failure ONLY.
+     alert-500 is the brand Red. It appears nowhere else: a brand colour used
+     for headings and buttons as well as recalls would leave the one colour
+     that must mean "stop" meaning nothing. */
+  --color-alert-200: #f6cccc;
+  --color-alert-300: #efa2a3;
+  --color-alert-400: #e25d5e;
+  --color-alert-500: #d61719;
+  --color-alert-600: #af1315;
+  --color-alert-800: #600a0b;
+  --color-alert-950: #270405;
+
+  /* Brand identity accents. Deliberately NOT status colours.
+     Green is never used to mark a record verified, active, or safe: a green
+     tick reads as "this product is fine", which is the one claim this system
+     refuses to make. Monad purple remains the marker for "cryptographically
+     checked". Yellow carries the demonstration notice, where it warns without
+     borrowing the alarm that belongs to red. */
+  --color-brand-green: #1aa266;
+  --color-brand-green-light: #6ac39c;
+  --color-brand-yellow: #fdd22b;
 }
 
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
 @layer base {
   html {
     color-scheme: dark;
+  }
+
+  /*
+    Display serif tuned toward the brand's Cooper-style direction.
+
+    Fraunces exposes SOFT (rounds the terminals) and WONK (swaps in the
+    quirkier alternates), which together approximate a bold rounded serif
+    without licensing Cooper Std Black. Swap this rule for `next/font/local`
+    if those web rights are ever confirmed.
+  */
+  .font-serif,
+  h1, h2, h3 {
+    font-variation-settings: "SOFT" 60, "WONK" 1, "opsz" 40;
   }
 
   body {

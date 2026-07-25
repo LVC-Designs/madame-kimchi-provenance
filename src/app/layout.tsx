@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Inter, Newsreader } from "next/font/google";
+import { Fraunces, IBM_Plex_Mono, Inter } from "next/font/google";
 
 import { DemoDataBanner } from "@/components/DemoDataBanner";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -15,11 +15,24 @@ const inter = Inter({
   display: "swap",
 });
 
-/** Product and batch narrative — the human half of a passport. */
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
+/**
+ * Product and batch narrative — the human half of a passport.
+ *
+ * Stands in for the brand's Cooper-style display direction. Fraunces carries
+ * SOFT and WONK axes that round the terminals and swap in warmer alternates,
+ * which is what makes it read like Cooper rather than a generic serif; the
+ * axis values live in `globals.css`.
+ *
+ * `next/font` downloads and self-hosts this at build time into `.next`, which
+ * Git ignores — no font file is ever committed. If Cooper Std Black web rights
+ * are confirmed, swap to `next/font/local`, but check its licence before the
+ * file goes anywhere near the repository.
+ */
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
   display: "swap",
+  axes: ["SOFT", "WONK", "opsz"],
 });
 
 /** Hashes, addresses, timestamps, transaction ids. */
@@ -47,7 +60,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${newsreader.variable} ${plexMono.variable} h-full`}
+      className={`${inter.variable} ${fraunces.variable} ${plexMono.variable} h-full`}
     >
       <body className="flex min-h-full flex-col">
         <Providers>

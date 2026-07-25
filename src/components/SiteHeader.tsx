@@ -25,6 +25,12 @@ export function SiteHeader() {
     <header className="border-ink-800 bg-ink-950/85 sticky top-0 z-40 border-b backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-4">
         <Link href="/" className="group flex items-baseline gap-2.5">
+          {/* Brand green, identity only. Never used to mark a record verified,
+              active, or safe — that would imply an endorsement of the contents. */}
+          <span
+            className="bg-brand-green size-2 shrink-0 self-center rounded-full"
+            aria-hidden
+          />
           <span className="font-serif text-[19px] leading-none tracking-tight text-paper-100 transition-colors group-hover:text-white">
             Madame Kimchi
           </span>
