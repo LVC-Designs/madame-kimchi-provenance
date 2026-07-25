@@ -15,6 +15,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { batchIdHash } from "@/lib/canonical";
 import { PROVENANCE_ADDRESS, isRecordHash, kimchiProvenanceAbi } from "@/lib/contract";
 import { fetchRecentRegistrations, type TimelineEvent } from "@/lib/events";
+import { bundledRecordHashes } from "@/lib/fixtures";
 import { explorerAddressUrl, explorerTxUrl } from "@/lib/monad";
 import { formatChainTime, resolveMetadata, statusName } from "@/lib/passport";
 
@@ -90,6 +91,36 @@ export function TraceIndex() {
     staleTime: 60_000,
     queryFn: () => fetchRecentRegistrations(publicClient!, PROVENANCE_ADDRESS!, 12),
   });
+
+  /**
+   * Records the application already knows about, listed regardless of the scan.
+   *
+   * The log scan walks backward from the chain head and stops after a bounded
+   * number of windows. Monad produces roughly 216,000 blocks a day, so any
+   * fixed window eventually falls behind a given registration and the batch
+   * silently vanishes from this list — which is exactly what happened to the
+   * demonstration batch. Bundled records are addressed by hash instead, so
+   * they are found by a single call that cannot age out.
+   */
+  const rows = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: { recordHash: Hex; event?: TimelineEvent }[] = [];
+
+    for (const event of recent?.events ?? []) {
+      const hash = String(event.args.recordHash ?? "").toLowerCase();
+      if (hash === "" || seen.has(hash)) continue;
+      seen.add(hash);
+      merged.push({ recordHash: hash as Hex, event });
+    }
+
+    for (const hash of bundledRecordHashes()) {
+      if (seen.has(hash.toLowerCase())) continue;
+      seen.add(hash.toLowerCase());
+      merged.push({ recordHash: hash as Hex });
+    }
+
+    return merged;
+  }, [recent]);
 
   function submit() {
     if (isRecord === true && searchHash !== null) router.push(`/trace/${searchHash}`);
@@ -195,22 +226,18 @@ export function TraceIndex() {
       <AuditPanel
         title="Recently registered batches"
         meta={
-          recent === undefined ? undefined : (
-            <span className="tabular font-mono text-[11px]">
-              {recent.events.length} shown
-            </span>
-          )
+          <span className="tabular font-mono text-[11px]">{rows.length} shown</span>
         }
       >
         {recentLoading ? (
           <p className="text-ink-400 text-[13px]">Reading contract events…</p>
-        ) : recent === undefined || recent.events.length === 0 ? (
+        ) : rows.length === 0 ? (
           <p className="text-ink-400 text-[13px] leading-relaxed">
             No batch registrations found in the scanned range.
           </p>
         ) : (
           <>
-            {!recent.range.complete && (
+            {recent !== undefined && !recent.range.complete && (
               <p className="border-ink-700 bg-ink-950 text-ink-400 mb-5 rounded-sm border px-3 py-2.5 text-[11px] leading-relaxed">
                 This RPC limits historical log queries, so only blocks{" "}
                 <span className="tabular font-mono">
@@ -225,8 +252,12 @@ export function TraceIndex() {
             )}
 
             <ul className="flex flex-col gap-3">
-              {recent.events.map((event) => (
-                <RegistrationRow key={String(event.args.recordHash)} event={event} />
+              {rows.map((row) => (
+                <RegistrationRow
+                  key={row.recordHash}
+                  recordHash={row.recordHash}
+                  event={row.event}
+                />
               ))}
             </ul>
           </>
@@ -247,23 +278,53 @@ export function TraceIndex() {
  * printing a name from an unverified document would present unchecked text as
  * though the chain vouched for it.
  */
-function RegistrationRow({ event }: { event: TimelineEvent }) {
-  const recordHash = String(event.args.recordHash ?? "");
-  const metadataURI = String(event.args.metadataURI ?? "");
-  const issuer = String(event.args.issuer ?? "");
-  const status = statusName(Number(event.args.status ?? 0));
-  const registeredAt =
-    typeof event.args.registeredAt === "bigint" ? event.args.registeredAt : null;
+function RegistrationRow({
+  recordHash,
+  event,
+}: {
+  recordHash: Hex;
+  /** Present only when the log scan reached this registration. */
+  event?: TimelineEvent;
+}) {
+  /*
+    Status, issuer and time are read from the chain rather than taken from the
+    registration event. An event records the state at registration; a batch
+    quarantined or recalled since would still show ACTIVE here. The event is
+    used only for the transaction link, which storage does not hold.
+  */
+  const { data: record, isLoading: recordLoading } = useReadContract({
+    address: PROVENANCE_ADDRESS ?? undefined,
+    abi: kimchiProvenanceAbi,
+    functionName: "getBatch",
+    args: [recordHash],
+    query: { enabled: PROVENANCE_ADDRESS !== null, retry: false },
+  });
 
-  const { data: resolution, isLoading } = useQuery({
-    queryKey: ["metadata", recordHash, metadataURI],
+  const chain = record as
+    | { issuer: Hex; registeredAt: bigint; status: number; metadataURI: string }
+    | undefined;
+
+  const { data: resolution, isLoading: metadataLoading } = useQuery({
+    queryKey: ["metadata", recordHash, chain?.metadataURI],
+    enabled: chain !== undefined,
     staleTime: 60_000,
     retry: false,
-    queryFn: () => resolveMetadata(recordHash, metadataURI),
+    queryFn: () => resolveMetadata(recordHash, chain?.metadataURI ?? ""),
   });
+
+  if (recordLoading) {
+    return (
+      <li className="border-ink-800 bg-ink-950/50 text-ink-400 rounded-sm border p-4 text-[13px]">
+        Reading record…
+      </li>
+    );
+  }
+
+  if (chain === undefined) return null;
 
   const verified = resolution?.integrity === "HASH_VERIFIED";
   const productName = verified ? (resolution?.metadata?.productName ?? null) : null;
+  const status = statusName(Number(chain.status));
 
   return (
     <li className="border-ink-800 bg-ink-950/50 hover:border-ink-700 rounded-sm border p-4 transition-colors">
@@ -275,10 +336,10 @@ function RegistrationRow({ event }: { event: TimelineEvent }) {
             </p>
           ) : (
             <p className="text-ink-400 font-serif text-xl leading-tight italic">
-              {isLoading ? "Loading metadata…" : "Metadata not verified"}
+              {metadataLoading ? "Loading metadata…" : "Metadata not verified"}
             </p>
           )}
-          {productName === null && !isLoading && (
+          {productName === null && !metadataLoading && (
             <p className="text-ink-400 mt-0.5 text-[11px] leading-relaxed">
               The published document could not be loaded and re-hashed, so no
               product name is shown for this record.
@@ -302,21 +363,21 @@ function RegistrationRow({ event }: { event: TimelineEvent }) {
             Registered
           </dt>
           <dd className="text-ink-300 tabular mt-0.5 font-mono text-[12px]">
-            {registeredAt === null ? "—" : formatChainTime(registeredAt)}
+            {formatChainTime(chain.registeredAt)}
           </dd>
         </div>
         <div className="sm:col-span-2">
           <dt className="text-ink-400 font-mono text-[11px] uppercase tracking-[0.14em]">
-            Authorized verifier
+            Registered by
           </dt>
           <dd className="mt-0.5">
             <a
-              href={explorerAddressUrl(issuer)}
+              href={explorerAddressUrl(chain.issuer)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-monad-400 hover:text-monad-300 font-mono text-[12px] break-all"
             >
-              {issuer} ↗
+              {chain.issuer} ↗
             </a>
           </dd>
         </div>
@@ -330,12 +391,16 @@ function RegistrationRow({ event }: { event: TimelineEvent }) {
           Batch Passport →
         </Link>
         <a
-          href={explorerTxUrl(event.transactionHash)}
+          href={
+            event === undefined
+              ? explorerAddressUrl(PROVENANCE_ADDRESS ?? "")
+              : explorerTxUrl(event.transactionHash)
+          }
           target="_blank"
           rel="noopener noreferrer"
           className="text-monad-400 hover:text-monad-300 font-mono text-[11px] uppercase tracking-[0.14em]"
         >
-          MonadScan ↗
+          {event === undefined ? "Registry on MonadScan ↗" : "MonadScan ↗"}
         </a>
       </div>
     </li>
