@@ -47,11 +47,8 @@ const MAX_REQUESTS_PER_SECOND = 18;
 /** Hard ceiling on fallback windows — about 4 hours of Monad at 400ms blocks. */
 const MAX_WINDOWS = 360;
 
-/** Monad's target block time, used only to estimate a scan start. */
-const BLOCK_TIME_MS = 400;
-
-/** Blocks of slack around the estimated start, absorbing block-time drift. */
-const START_MARGIN = 2_000n;
+/** Blocks of slack before the located start block, for clock skew at the edge. */
+const START_MARGIN = 50n;
 
 export interface ScanRange {
   fromBlock: bigint;
@@ -119,27 +116,39 @@ async function withRateLimitRetry<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 /**
- * Estimates the block a batch was registered in, from its on-chain timestamp.
+ * Finds the first block at or after a timestamp, by binary search.
  *
- * Costs one `getBlock` and is deliberately approximate — `START_MARGIN` absorbs
- * the error, and the scan runs forward from here to the head anyway. A binary
- * search would be exact but would spend ~25 round trips to refine a bound that
- * a margin handles for one.
+ * The previous version extrapolated from an assumed 400ms block time. Monad
+ * actually produces blocks around 306ms, and that 30% error compounds with
+ * elapsed time: four hours after a registration the estimate was already
+ * 11,813 blocks past it, so the scan began after the events it was looking for
+ * and returned nothing. Any fixed block-time constant fails the same way,
+ * just on a different schedule.
+ *
+ * A binary search makes no assumption about block time. It costs about
+ * log2(range) requests — roughly sixteen over a fifty-thousand block span —
+ * and is exact no matter how the chain's cadence changes.
  */
-async function estimateStartBlock(
+async function findBlockAtTimestamp(
   client: PublicClient,
-  headBlock: bigint,
-  registeredAtSeconds: bigint,
+  targetSeconds: bigint,
+  lowBlock: bigint,
+  highBlock: bigint,
 ): Promise<bigint> {
-  const head = await client.getBlock({ blockNumber: headBlock });
-  const elapsedMs = (head.timestamp - registeredAtSeconds) * 1000n;
-  if (elapsedMs <= 0n) return headBlock;
+  let low = lowBlock;
+  let high = highBlock;
 
-  const estimated = headBlock - elapsedMs / BigInt(BLOCK_TIME_MS);
-  const withMargin = estimated - START_MARGIN;
+  while (low < high) {
+    const middle = low + (high - low) / 2n;
+    const block = await withRateLimitRetry(() =>
+      client.getBlock({ blockNumber: middle }),
+    );
 
-  // Never scan before the contract existed.
-  return withMargin < PROVENANCE_DEPLOY_BLOCK ? PROVENANCE_DEPLOY_BLOCK : withMargin;
+    if (block.timestamp < targetSeconds) low = middle + 1n;
+    else high = middle;
+  }
+
+  return low;
 }
 
 async function fetchWindow(
@@ -167,10 +176,17 @@ export async function fetchRegistryEvents(
 ): Promise<TimelineResult> {
   const headBlock = await client.getBlockNumber();
 
-  const startBlock =
-    options.registeredAt === undefined
-      ? PROVENANCE_DEPLOY_BLOCK
-      : await estimateStartBlock(client, headBlock, options.registeredAt);
+  let startBlock = PROVENANCE_DEPLOY_BLOCK;
+  if (options.registeredAt !== undefined) {
+    const located = await findBlockAtTimestamp(
+      client,
+      options.registeredAt,
+      PROVENANCE_DEPLOY_BLOCK,
+      headBlock,
+    );
+    const withMargin = located - START_MARGIN;
+    startBlock = withMargin < PROVENANCE_DEPLOY_BLOCK ? PROVENANCE_DEPLOY_BLOCK : withMargin;
+  }
 
   // --- 1. Optimistic single request ------------------------------------
   try {
