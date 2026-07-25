@@ -1,26 +1,185 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Madame Kimchi — Batch Provenance Protocol
+  Korean pantry label meets technical audit trail.
+
+  The palette carries meaning, and two of its ranges are rationed on purpose:
+
+    paper   warm label stock. Product and batch narrative.
+    ink     deep application chrome. Verification tools and structure.
+    monad   RESERVED for cryptographic verification and explorer actions.
+    alert   RESERVED for quarantine, recall, and tamper failure.
+
+  If purple appears beside something that is not a hash, a signature, or a link
+  to the chain, the interface has begun implying proof it does not have. If red
+  appears anywhere but a recall, a quarantine, or a failed comparison, the one
+  colour that must mean "stop" stops meaning anything.
+
+  There is no light theme. Deep ink chrome holding warm paper surfaces IS the
+  design; re-tinting the chrome would invert the relationship the whole layout
+  is built on.
+*/
+
+@theme {
+  /* Warm paper — product and batch narrative surfaces */
+  --color-paper-50: #fcf9f3;
+  --color-paper-100: #f7f1e6;
+  --color-paper-200: #efe5d3;
+  --color-paper-300: #e2d4bb;
+  --color-paper-400: #cbb794;
+  --color-paper-500: #ad9670;
+  --color-paper-700: #6d5c45;
+  --color-paper-800: #4d4130;
+  --color-paper-900: #3a3125;
+
+  /* Deep ink — application chrome */
+  --color-ink-950: #0a0b0e;
+  --color-ink-900: #101217;
+  /* Darkened from #15181f so ink-400 text clears 4.5:1 on it too. */
+  --color-ink-850: #121419;
+  --color-ink-800: #1b1f27;
+  --color-ink-700: #252a35;
+  --color-ink-600: #343b49;
+  --color-ink-500: #4a5364;
+  /* Lifted from #6b7587 (4.03:1) to clear WCAG AA 4.5:1 on ink-900. This is the
+     secondary-text tone; ink-500 and ink-600 are borders and must not carry text. */
+  --color-ink-400: #757f8f;
+  --color-ink-300: #98a1b1;
+  --color-ink-200: #c3c9d3;
+  --color-ink-100: #e4e7ec;
+
+  /* Monad purple — cryptographic verification and explorer actions ONLY */
+  --color-monad-200: #d5cefd;
+  --color-monad-300: #b9aefc;
+  --color-monad-400: #9b8afb;
+  --color-monad-500: #836ef9;
+  --color-monad-600: #6a51ee;
+  --color-monad-700: #5539d4;
+  --color-monad-900: #2e1a72;
+  --color-monad-950: #200052;
+
+  /* Alert red — quarantine, recall, tamper failure ONLY */
+  --color-alert-200: #f7cbc7;
+  --color-alert-300: #f0a49d;
+  --color-alert-400: #e26a60;
+  --color-alert-500: #d6392f;
+  --color-alert-600: #b62a22;
+  --color-alert-800: #6d1712;
+  --color-alert-950: #330a07;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-ink-950);
+    color: var(--color-ink-100);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+    Hashes, addresses, and transaction ids must never read as prose, and must
+    never re-flow mid-value when a layout narrows.
+  */
+  code,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+    font-variant-ligatures: none;
+  }
+
+  ::selection {
+    background-color: var(--color-monad-500);
+    color: #fff;
+  }
+
+  /*
+    One focus indicator for everything focusable.
+
+    Declared globally rather than per component so a control added later cannot
+    quietly ship without one. `:focus-visible` rather than `:focus` keeps it off
+    mouse clicks, which is what stops people reaching for `outline: none` in the
+    first place.
+  */
+  :focus-visible {
+    outline: 2px solid var(--color-monad-400);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Visible on paper surfaces too, where purple-on-cream is weak. */
+  .paper-grain :focus-visible {
+    outline-color: var(--color-paper-900);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/*
+  Skip link: hidden until focused, then pinned top-left.
+  A keyboard reader should not have to tab the whole header to reach a passport.
+*/
+@utility skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+
+  &:focus {
+    left: 0.5rem;
+    top: 0.5rem;
+    background-color: var(--color-paper-100);
+    color: var(--color-ink-950);
+    padding: 0.5rem 0.875rem;
+    border-radius: 2px;
+    font-size: 0.8125rem;
+  }
+}
+
+/*
+  Warm label stock. Three very low-contrast gradients stand in for fibre and
+  press variation — enough to read as paper beside the ink chrome without
+  becoming a texture anyone consciously notices.
+*/
+@utility paper-grain {
+  background-color: var(--color-paper-100);
+  background-image:
+    radial-gradient(at 12% 18%, rgb(255 255 255 / 0.75) 0px, transparent 55%),
+    radial-gradient(at 88% 8%, rgb(226 212 187 / 0.5) 0px, transparent 45%),
+    radial-gradient(at 70% 95%, rgb(203 183 148 / 0.28) 0px, transparent 50%);
+}
+
+/* Ruled ledger lines for audit-trail surfaces. */
+@utility ledger-rules {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 27px,
+    rgb(109 92 69 / 0.13) 27px,
+    rgb(109 92 69 / 0.13) 28px
+  );
+}
+
+/* The perforated edge of a pantry label. */
+@utility label-perforation {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--color-paper-400) 0px,
+    var(--color-paper-400) 4px,
+    transparent 4px,
+    transparent 10px
+  );
+}
+
+/* Numeric columns in the audit chrome must not jitter as values change. */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
 }

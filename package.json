@@ -2,11 +2,22 @@
   "name": "madame-kimchi-provenance",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:lib": "node --test 'src/lib/*.test.ts'",
+    "typecheck": "tsc --noEmit && npm run typecheck:chain",
+    "typecheck:chain": "hardhat build && tsc --noEmit -p tsconfig.hardhat.json",
+    "chain:compile": "hardhat build",
+    "chain:test": "hardhat test",
+    "chain:deploy": "hardhat ignition deploy ignition/modules/KimchiProvenance.ts --network monadTestnet",
+    "chain:abi": "hardhat build && node scripts/export-abi.ts",
+    "chain:export": "node scripts/export-deployment.ts",
+    "demo:seed": "hardhat run scripts/seed-demo-batch.ts --network monadTestnet",
+    "chain:clean": "hardhat clean"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.6.1",

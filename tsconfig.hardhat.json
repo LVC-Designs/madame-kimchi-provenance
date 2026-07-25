@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "lib": ["es2023"],
+    "module": "node20",
+    "moduleResolution": "node16",
+    "target": "es2023",
+    "types": ["node"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    // Scripts reach into src/lib for the canonical hashing and schema, so the
+    // one definition of a record is shared by the chain tooling and the app.
+    // Node's runtime resolver needs the explicit .ts extension; the `@/*` alias
+    // exists so those shared modules resolve their own imports identically here
+    // and under the Next bundler.
+    "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    // Two candidates: node16 resolution needs an explicit extension, which the
+    // aliased specifiers in src/lib deliberately omit for the bundler's sake.
+    "paths": {
+      "@/*": ["./src/*", "./src/*.ts"]
+    }
+  },
+  "include": [
+    "hardhat.config.ts",
+    "test/**/*.ts",
+    "ignition/**/*.ts",
+    "scripts/**/*.ts",
+    "artifacts/**/*.d.ts"
+  ]
+}

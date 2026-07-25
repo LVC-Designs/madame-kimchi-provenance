@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "batchId": "MK-DEMO-2026-001",
+  "productName": "Madame Kimchi Original Napa Cabbage Kimchi",
+  "productSku": "MK-ORIG-500G",
+  "lotNumber": "L-2026-014",
+  "productionDate": "2026-01-12",
+  "fermentationStart": "2026-01-12T09:30:00Z",
+  "fermentationEnd": "2026-01-26T08:15:00Z",
+  "packedDate": "2026-01-27",
+  "bestBeforeDate": "2026-07-27",
+  "ingredientOrigins": [
+    {
+      "ingredient": "Napa cabbage",
+      "originRegion": "Gangwon Province",
+      "originCountry": "KR",
+      "note": "Fictional demonstration supplier. Winter harvest."
+    },
+    {
+      "ingredient": "Gochugaru chilli flakes",
+      "originRegion": "Yeongyang County",
+      "originCountry": "KR",
+      "note": "Fictional demonstration supplier. Coarse grind."
+    },
+    {
+      "ingredient": "Sea salt",
+      "originRegion": "Sinan County",
+      "originCountry": "KR",
+      "note": null
+    },
+    {
+      "ingredient": "Korean radish",
+      "originRegion": "Jeju Island",
+      "originCountry": "KR",
+      "note": null
+    }
+  ],
+  "facilityName": "Demonstration Fermentation Room 2",
+  "certificationReferences": [
+    {
+      "label": "Demonstration food hygiene registration",
+      "issuer": "Fictional Demonstration Authority",
+      "identifier": "DEMO-FH-000000",
+      "uri": null
+    }
+  ],
+  "documentReferences": [
+    {
+      "label": "Demonstration batch production sheet",
+      "documentType": "PRODUCTION_RECORD",
+      "sha256": "0x9b4fd1c4d0a2ec9b8e46a0f6c31d5f9a2b7e0c48d16a3f52b9c7e8d04a1f6b23",
+      "uri": null
+    },
+    {
+      "label": "Demonstration fermentation temperature log",
+      "documentType": "PROCESS_LOG",
+      "sha256": "0x3f7a1d6b09c8e254af31b70d9e6c45128d0b3a9f7e2c81460d5a3b8f2c9e17d4",
+      "uri": null
+    }
+  ],
+  "status": "ACTIVE",
+  "supersedesRecordHash": null,
+  "notes": "DEMO DATA — NOT A COMMERCIAL BATCH. Every value in this record is fictional and exists only to demonstrate the Monad Testnet provenance prototype. It is not a real product batch, carries no commercial or regulatory standing, and asserts nothing about food safety.",
+  "generatedAt": "2026-01-27T14:00:00Z"
+}
