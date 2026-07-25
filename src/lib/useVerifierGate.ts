@@ -12,6 +12,7 @@ import {
 
 import { PROVENANCE_ADDRESS, VERIFIER_ROLE, kimchiProvenanceAbi } from "@/lib/contract";
 import { MONAD_TESTNET_CHAIN_ID } from "@/lib/monad";
+import { useOpenRegistration } from "@/lib/useOpenRegistration";
 
 /**
  * The conditions a wallet must satisfy before it can write to the registry.
@@ -44,6 +45,8 @@ export interface VerifierGate {
   connectError: string | null;
   /** No injected provider at all — usually means no wallet extension installed. */
   noWalletDetected: boolean;
+  /** This registry lets anyone write; "authorized verifier" would be a lie here. */
+  openRegistration: boolean;
   switchToMonad: () => void;
   isSwitching: boolean;
 }
@@ -57,6 +60,7 @@ export function useVerifierGate(): VerifierGate {
     error: rawConnectError,
   } = useConnect();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
+  const openRegistration = useOpenRegistration();
 
   const configured = PROVENANCE_ADDRESS !== null;
   const onMonad = chainId === MONAD_TESTNET_CHAIN_ID;
@@ -103,6 +107,7 @@ export function useVerifierGate(): VerifierGate {
       !noFunds,
     connectors,
     noWalletDetected: connectors.length === 0,
+    openRegistration,
     connect: (chosen?: Connector) => {
       // Prefer an explicit choice, then anything calling itself MetaMask, then
       // any injected provider. Falling through to connectors[0] rather than

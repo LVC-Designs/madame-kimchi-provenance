@@ -156,6 +156,26 @@ export function VerifierGates({ gate }: { gate: VerifierGate }) {
     );
   }
 
+  /*
+    On an open registry every account reports as a verifier, so saying
+    "authorized verifier" here would dress up a permissionless write as a
+    vouched-for one. Name what this actually is instead.
+  */
+  if (gate.openRegistration) {
+    return (
+      <Notice tone="info" title="Open sandbox — anyone can register">
+        <p className="mb-2">
+          This registry accepts writes from any wallet. Records are still
+          append-only, still timestamped, and still tamper-evident — but{" "}
+          <strong>no role was granted to anyone</strong>, so a record here shows
+          only that some wallet published it, not that an authorised verifier
+          did.
+        </p>
+        <MonoValue tone="muted">{gate.address}</MonoValue>
+      </Notice>
+    );
+  }
+
   if (gate.hasVerifierRole === true) {
     return (
       <Notice tone="crypto" title="Authorized verifier">

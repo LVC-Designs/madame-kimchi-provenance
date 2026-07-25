@@ -20,6 +20,7 @@ import { isDemoRecord } from "@/lib/fixtures";
 import { explorerAddressUrl } from "@/lib/monad";
 import { formatChainTime, resolveMetadata, statusName } from "@/lib/passport";
 import { isSafeHref } from "@/lib/schema";
+import { useOpenRegistration } from "@/lib/useOpenRegistration";
 
 import { PassportQr } from "./PassportQr";
 
@@ -50,6 +51,23 @@ const DISCLAIMERS = [
   },
 ] as const;
 
+/**
+ * Replaces the first distinction on an open registry.
+ *
+ * The other two still hold — the hash check and the absence of validation are
+ * properties of the data, not of who wrote it. Only the claim about authority
+ * has to go, and it has to go loudly: this page is the artefact people
+ * screenshot.
+ */
+const OPEN_DISCLAIMERS = [
+  {
+    heading: "Published by an unverified wallet",
+    body: "This registry accepts writes from anyone. The wallet shown registered this record, but no role was granted to it and nobody vouched for it. Treat the identity as unverified.",
+  },
+  DISCLAIMERS[1],
+  DISCLAIMERS[2],
+] as const;
+
 interface ChainRecord {
   batchIdHash: Hex;
   supersedesRecordHash: Hex;
@@ -62,6 +80,7 @@ interface ChainRecord {
 
 export function BatchPassport({ recordHash }: { recordHash: Hex }) {
   const publicClient = usePublicClient();
+  const openRegistration = useOpenRegistration();
   const configured = PROVENANCE_ADDRESS !== null;
 
   // --- The on-chain record. No wallet involved: this is a public read. ---
@@ -172,6 +191,14 @@ export function BatchPassport({ recordHash }: { recordHash: Hex }) {
             provenance prototype and carries no commercial or regulatory standing.
           </p>
         </div>
+      )}
+
+      {openRegistration && (
+        <Banner tone="alert" title="Open sandbox registry">
+          Anyone can write to this registry, so a record here shows only that
+          some wallet published it — not that an authorised verifier did. The
+          integrity guarantees are unchanged; the identity claim is not.
+        </Banner>
       )}
 
       {/* ============================================ lifecycle banners */}
@@ -490,7 +517,7 @@ export function BatchPassport({ recordHash }: { recordHash: Hex }) {
             </blockquote>
 
             <dl className="border-ink-800 mt-5 flex flex-col gap-4 border-t pt-5">
-              {DISCLAIMERS.map((claim) => (
+              {(openRegistration ? OPEN_DISCLAIMERS : DISCLAIMERS).map((claim) => (
                 <div key={claim.heading}>
                   <dt className="text-ink-200 font-serif text-[14px] leading-snug">
                     {claim.heading}
