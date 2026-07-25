@@ -5,6 +5,25 @@ import {
 } from "viem";
 
 /**
+ * Digs the JSON-RPC / EIP-1193 error code out of a nested error chain.
+ *
+ * Wallets return these codes with terse standard text — "Requested resource
+ * not available" for -32002 tells a user nothing about the fact that they have
+ * a MetaMask popup waiting behind the browser window.
+ */
+function rpcCode(error: unknown): number | null {
+  let current: unknown = error;
+
+  for (let depth = 0; depth < 10 && current !== null && current !== undefined; depth += 1) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === "number") return code;
+    current = (current as { cause?: unknown }).cause;
+  }
+
+  return null;
+}
+
+/**
  * Turns a wallet or RPC failure into something a verifier can act on.
  *
  * Every branch corresponds to a condition the registry can actually produce:
@@ -99,6 +118,48 @@ export function classifyWriteError(error: unknown): Failure {
       detail:
         "This wallet cannot cover the gas for this transaction. Fund it with testnet MON and try again.",
     };
+  }
+
+  // Wallet-level EIP-1193 / JSON-RPC codes, checked before the text heuristics
+  // below because their standard messages are uninformative.
+  switch (rpcCode(error)) {
+    case -32002:
+      return {
+        kind: "rpc",
+        title: "Wallet request already pending",
+        detail:
+          "Your wallet is already waiting on a request — usually a popup hidden behind this window, or one dismissed without approving or rejecting. Open MetaMask, clear the pending request, then try again.",
+      };
+    case 4100:
+      return {
+        kind: "unauthorized",
+        title: "Account not authorized for this site",
+        detail:
+          "Your wallet has not granted this site permission to use this account. Open MetaMask, connect this account to this site, then try again. Permissions are per-site, so a newly deployed URL needs connecting again.",
+      };
+    case 4902:
+      return {
+        kind: "rpc",
+        title: "Monad Testnet not in your wallet",
+        detail:
+          "Your wallet does not know this network. Use the Switch to Monad Testnet button, which will offer to add it.",
+      };
+    case 4900:
+    case 4901:
+      return {
+        kind: "rpc",
+        title: "Wallet disconnected",
+        detail: "Your wallet is not connected to a network. Reconnect it and try again.",
+      };
+    case -32601:
+    case 4200:
+      return {
+        kind: "rpc",
+        title: "Method not supported",
+        detail: `Your wallet or its configured RPC rejected this call as unsupported. Check that the Monad Testnet entry in your wallet uses a working RPC URL. ${error.shortMessage}`,
+      };
+    default:
+      break;
   }
 
   if (/rate limit|requests limited to|-32011|\b429\b/i.test(error.message)) {
