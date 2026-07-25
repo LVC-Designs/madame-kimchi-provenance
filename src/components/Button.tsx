@@ -20,10 +20,15 @@ export function Button({
   children,
   tone = "primary",
   className = "",
+  type = "button",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { children: ReactNode; tone?: Tone }) {
   return (
     <button
+      // Defaults to "button", not the HTML default of "submit". A submit-typed
+      // button inside a form fires the form instead of its own onClick, which
+      // fails silently and is miserable to track down.
+      type={type}
       {...props}
       className={`rounded-sm px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors disabled:cursor-not-allowed ${TONES[tone]} ${className}`}
     >

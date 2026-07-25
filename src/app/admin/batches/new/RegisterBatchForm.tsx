@@ -176,6 +176,9 @@ export function RegisterBatchForm() {
           recordHash={recordHash}
           batchIdHashValue={batchIdHashValue}
           alreadyRegistered={alreadyRegistered as boolean | undefined}
+          onRestamp={() =>
+            setDraft((current) => ({ ...current, generatedAt: nowInstant() }))
+          }
         />
 
         {/* Transaction review. */}

@@ -21,6 +21,7 @@ export function CanonicalPreview({
   recordHash,
   batchIdHashValue,
   alreadyRegistered,
+  onRestamp,
 }: {
   metadata: BatchMetadata | null;
   canonicalJson: string | null;
@@ -28,6 +29,8 @@ export function CanonicalPreview({
   batchIdHashValue: Hex | null;
   /** `undefined` while the on-chain check is in flight. */
   alreadyRegistered: boolean | undefined;
+  /** Re-stamps `generatedAt`, producing a distinct record hash. */
+  onRestamp: () => void;
 }) {
   function download() {
     if (metadata === null) return;
@@ -109,11 +112,21 @@ export function CanonicalPreview({
         </div>
 
         {alreadyRegistered === true && (
-          <p className="border-alert-600/50 bg-alert-950/50 text-alert-200 mt-5 rounded-sm border px-3 py-2.5 text-[12px] leading-relaxed">
-            This record hash is already registered on Monad Testnet. Records are
-            never overwritten, so submitting would revert. Change a field, or
-            re-stamp the generation time, to publish a distinct record.
-          </p>
+          <div className="border-alert-600/50 bg-alert-950/50 mt-5 rounded-sm border px-3 py-3">
+            <p className="text-alert-200 text-[12px] leading-relaxed">
+              This record hash is already registered on Monad Testnet. Records
+              are never overwritten, so submitting would revert — that rejection
+              is the append-only guarantee working, not a fault.
+            </p>
+            <p className="text-ink-400 mt-2 text-[12px] leading-relaxed">
+              To register something new: re-stamp the generation time for a
+              fresh version of this batch, or change the Batch ID for a
+              genuinely different batch.
+            </p>
+            <Button tone="ghost" onClick={onRestamp} className="mt-3">
+              Re-stamp time and make registerable
+            </Button>
+          </div>
         )}
       </AuditPanel>
     </div>
